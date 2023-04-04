@@ -1,19 +1,19 @@
 import base64
+
 from django.core.files.base import ContentFile
 from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
 
 from posts.models import Comment, Follow, Group, Post, User
 
 
 class Base64ImageField(serializers.ImageField):
-    '''
+    """
     Пользовательское поле для сериализатора Позволяет получать данные
     изображения в формате base64 и преобразовывает их в объект
     Django ContentFile.
-    '''
-    def to_internal_value(self, data):
-        '''Преобразует данные изображения в объект ContentFile'''
+    """
+    def to_internal_value(self, data: str) -> ContentFile:
+        """Преобразует данные изображения в объект ContentFile."""
         if isinstance(data, str) and data.startswith('data:image'):
             format, imgstr = data.split(';base64,')
             ext = format.split('/')[-1]
@@ -22,8 +22,9 @@ class Base64ImageField(serializers.ImageField):
 
 
 class PostSerializer(serializers.ModelSerializer):
-    '''Сериализатор для модели Post.'''
-    author = SlugRelatedField(slug_field='username', read_only=True)
+    """Сериализатор для модели Post."""
+    author = serializers.SlugRelatedField(
+        slug_field='username', read_only=True)
     image = Base64ImageField(required=False, allow_null=True)
 
     class Meta:
@@ -33,7 +34,7 @@ class PostSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    '''Сериализатор для модели Comment.'''
+    """Сериализатор для модели Comment."""
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
     )
@@ -45,7 +46,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class GroupSerializer(serializers.ModelSerializer):
-    '''Сериализатор для модели Group.'''
+    """Сериализатор для модели Group."""
     class Meta:
         fields = ('id', 'title', 'slug', 'description')
         model = Group
@@ -53,25 +54,31 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    '''Сериализатор для модели Follow.'''
-    user = SlugRelatedField(slug_field='username', read_only=True)
-    following = SlugRelatedField(
+    """Сериализатор для модели Follow."""
+    user = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True,
+        default=serializers.CurrentUserDefault()
+    )
+    following = serializers.SlugRelatedField(
         slug_field='username', queryset=User.objects.all())
 
     class Meta:
         fields = ('user', 'following')
         model = Follow
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=Follow.objects.all(),
+                fields=('user', 'following'),
+                message=('Вы уже подписаны на этого автора!')
+            )
+        ]
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
         """
         Проверяет данные перед созданием новой подписки.
         Не даст подписаться на себя и создать повторную запись.
         """
         if self.context['request'].user == data['following']:
-            raise serializers.ValidationError("Нельзя подписываться на себя!")
-        if Follow.objects.filter(
-            user=self.context['request'].user, following=data['following']
-        ).exists():
-            raise serializers.ValidationError(
-                "Вы уже подписаны на этого автора!")
+            raise serializers.ValidationError('Нельзя подписываться на себя!')
         return data

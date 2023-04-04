@@ -5,10 +5,10 @@ User = get_user_model()
 
 
 class Group(models.Model):
-    '''
+    """
     Модель создания группы.
     Метод str() возвращает заголовок группы.
-    '''
+    """
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True)
     description = models.TextField()
@@ -18,10 +18,10 @@ class Group(models.Model):
 
 
 class Post(models.Model):
-    '''
+    """
     Модель создания Поста.
     Метод str() возвращает текст поста.
-    '''
+    """
     text = models.TextField()
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
     author = models.ForeignKey(
@@ -40,10 +40,10 @@ class Post(models.Model):
 
 
 class Comment(models.Model):
-    '''
+    """
     Модель создания Комментария.
     Метод str() возвращает текст комментария.
-    '''
+    """
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='comments')
     post = models.ForeignKey(
@@ -57,8 +57,7 @@ class Comment(models.Model):
 
 
 class Follow(models.Model):
-    '''
-    Модель создания Подписки.'''
+    """Модель создания Подписки."""
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='follower'
     )
